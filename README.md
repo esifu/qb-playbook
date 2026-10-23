@@ -1,2 +1,2 @@
 # qb-playbook
-A Python backtester
+A Python quant backtester
