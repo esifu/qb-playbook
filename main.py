@@ -36,8 +36,18 @@ def main():
         title="SPY: Moving Average Strategy vs Buy-and-Hold",
         ylabel="Growth of $1",
     )
-
+    handles, labels = ax.get_legend_handles_labels()
+    handles.append(
+        Line2D(
+            [],
+            [],
+            color="none",
+            label=f"Parameters: fast={fast_window}, slow={slow_window}, cost={cost_bps:g} bps",
+        )
+    )
+    ax.legend(handles=handles, labels=labels + [handles[-1].get_label()])
     plt.tight_layout()
+    plt.savefig(output_dir / "equity_curve.png", dpi=150)
     plt.show()
 
 
