@@ -33,7 +33,7 @@ def main():
 
     results[["strategy_equity", "buy_hold_equity"]].plot(
         figsize=(11, 6),
-        title="SPY: Moving Average Strategy vs Buy-and-Hold",
+        title="SPY: Moving Average vs Buy-and-Hold",
         ylabel="Growth of $1",
     )
     handles, labels = ax.get_legend_handles_labels()
