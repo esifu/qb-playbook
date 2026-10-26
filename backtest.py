@@ -6,13 +6,15 @@ def run_backtest(
     prices: pd.Series,
     fast_window: int = 20,
     slow_window: int = 100,
-    cost_bps: float = 5.0,
+    cost_bps: float = 0.0,
 ) -> pd.DataFrame:
     """
     Compare a long/flat moving-average strategy with buy-and-hold.
 
-    cost_bps is the assumed transaction cost in basis points per
-    unit of turnover. 1 basis point = 0.01%.
+    prices: historical prices.
+    fast_window: the short moving-average window.
+    slow_window: the long moving-average window.
+    cost_bps: the assumed transaction cost in basis points.
     """
     if fast_window <= 0 or slow_window <= 0:
         raise ValueError("Moving-average windows must be positive")
@@ -38,10 +40,10 @@ def run_backtest(
     df["fast_ma"] = prices.rolling(fast_window).mean()
     df["slow_ma"] = prices.rolling(slow_window).mean()
 
-    # The signal uses today's close. The position is taken on the
-    # next bar, avoiding the use of today's signal for today's return.
     signal = (df["fast_ma"] > df["slow_ma"]).astype(float)
     signal = signal.where(df["slow_ma"].notna(), 0.0)
+
+    # The position is the signal shifted by one period to avoid lookahead bias.
     df["position"] = signal.shift(1).fillna(0.0)
 
     df["turnover"] = df["position"].diff().abs()
