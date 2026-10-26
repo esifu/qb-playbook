@@ -1,3 +1,4 @@
+from unittest import result
 
 import numpy as np
 import pandas as pd
@@ -44,3 +45,22 @@ def test_metrics_include_max_drawdown():
 
     assert "max_drawdown" in metrics
     assert metrics["max_drawdown"] < 0
+
+def test_manual_calculation_check():
+    dates = pd.date_range("2025-01-01", periods=6, freq="B")
+    prices = pd.Series([100, 101, 102, 103, 104, 105], index=dates)
+
+    result = run_backtest(
+        prices,
+        fast_window=2,
+        slow_window=3,
+        cost_bps=0
+    )
+
+    expected_positions = [0, 0, 0, 1, 1, 1]
+
+    assert result["position"].tolist() == expected_positions
+
+    assert result["strategy_return"].iloc[:3].tolist() == [0, 0, 0]
+
+    assert result["strategy_return"].iloc[3] == pytest.approx((103/102)-1)
