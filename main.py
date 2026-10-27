@@ -7,6 +7,13 @@ from matplotlib.lines import Line2D
 from data_loader import load_prices
 from backtest import run_backtest
 from metrics import calculate_metrics
+from parameter_heatmap import (
+    COST_BPS,
+    PERIOD,
+    TICKER,
+    evaluation_window,
+    select_parameters,
+)
 
 
 def print_metrics(name, returns):
@@ -18,12 +25,15 @@ def print_metrics(name, returns):
 
 
 def main():
-    prices = load_prices("SPY", "10y")
+    prices = load_prices(TICKER, PERIOD).dropna().sort_index()
 
-    # Keep the strategy parameters fixed for this experiment.
-    fast_window = 10
-    slow_window = 100
-    cost_bps = 6.0
+    # The windows are chosen from the in-sample grid only, so the
+    # out-of-sample period plays no part in picking them.
+    print("Selecting parameters from the in-sample period...")
+    fast_window, slow_window = select_parameters(prices)
+    cost_bps = COST_BPS
+    print(f"Selected fast={fast_window}, slow={slow_window}")
+
     results = run_backtest(
         prices,
         fast_window=fast_window,

@@ -97,6 +97,37 @@ def neighbourhood_mean(grid: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(smoothed, index=grid.index, columns=grid.columns)
 
 
+def score_grid(prices: pd.Series, window: slice) -> pd.DataFrame:
+    """Run the grid and add each cell's neighbourhood-average Sharpe."""
+    results_df = run_grid(prices, window)
+
+    sharpe_grid = results_df.pivot(
+        index="fast_window", columns="slow_window", values="sharpe_ratio"
+    )
+    smoothed_sharpe = neighbourhood_mean(sharpe_grid)
+
+    return results_df.merge(
+        smoothed_sharpe.stack().rename("neighbourhood_sharpe").reset_index(),
+        on=["fast_window", "slow_window"],
+    )
+
+
+def select_parameters(
+    prices: pd.Series,
+    metric: str = "neighbourhood_sharpe",
+) -> tuple[int, int]:
+    """
+    Choose (fast_window, slow_window) using in-sample data only.
+
+    The default picks the centre of the strongest region rather than the
+    single best cell, which is less likely to be a lucky outlier.
+    """
+    results_df = score_grid(prices, evaluation_window(prices))
+    best = results_df.loc[results_df[metric].idxmax()]
+
+    return int(best["fast_window"]), int(best["slow_window"])
+
+
 # --------------------------------------------------
 # Plotting
 # --------------------------------------------------
@@ -161,7 +192,7 @@ def main():
     end_date = prices.index[window.stop - 1].date()
     print(f"Scoring in-sample period {start_date} to {end_date}")
 
-    results_df = run_grid(prices, window)
+    results_df = score_grid(prices, window)
 
     # Buy-and-hold over exactly the same rows.
     benchmark = run_backtest(prices, cost_bps=COST_BPS).iloc[window]
@@ -172,12 +203,6 @@ def main():
     )
     cagr_grid = results_df.pivot(
         index="fast_window", columns="slow_window", values="cagr"
-    )
-    smoothed_sharpe = neighbourhood_mean(sharpe_grid)
-
-    results_df = results_df.merge(
-        smoothed_sharpe.stack().rename("neighbourhood_sharpe").reset_index(),
-        on=["fast_window", "slow_window"],
     )
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
