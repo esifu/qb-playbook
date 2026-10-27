@@ -41,15 +41,24 @@ def main():
         cost_bps=cost_bps,
     )
 
-    # Split chronologically: first 70% and final 30%.
-    split_index = int(len(results) * 0.70)
+    # In-sample is the same rows the grid was scored on (after the longest
+    # warm-up); out-of-sample is everything after it. Moving averages at the
+    # start of out-of-sample may use earlier prices, which were known then.
+    in_sample_window = evaluation_window(prices)
+    split_index = in_sample_window.stop
 
-    in_sample = results.iloc[:split_index]
+    in_sample = results.iloc[in_sample_window]
     out_sample = results.iloc[split_index:]
 
-    print(f"Total observations: {len(results)}")
-    print(f"In-sample observations: {len(in_sample)}")
-    print(f"Out-of-sample observations: {len(out_sample)}")
+    print(f"\nTotal observations: {len(results)}")
+    print(
+        f"In-sample observations: {len(in_sample)} "
+        f"({in_sample.index[0].date()} to {in_sample.index[-1].date()})"
+    )
+    print(
+        f"Out-of-sample observations: {len(out_sample)} "
+        f"({out_sample.index[0].date()} to {out_sample.index[-1].date()})"
+    )
 
     for period_name, period in [
         ("IN-SAMPLE: Moving average", in_sample["strategy_return"]),
@@ -65,11 +74,21 @@ def main():
 
     results.to_csv(output_dir / "backtest_results.csv")
 
-    # Plot the full-period equity curves.
-    ax = results[["strategy_equity", "buy_hold_equity"]].plot(
+    # Plot equity from the start of in-sample scoring, both rebased to $1.
+    scored = results.iloc[in_sample_window.start:]
+    equity = (1 + scored[["strategy_return", "buy_hold_return"]]).cumprod()
+    equity.columns = ["strategy_equity", "buy_hold_equity"]
+
+    ax = equity.plot(
         figsize=(11, 6),
-        title="SPY: Moving Average vs Buy-and-Hold",
+        title=f"{TICKER}: Moving Average vs Buy-and-Hold",
         ylabel="Growth of $1",
+    )
+    ax.axvline(
+        out_sample.index[0],
+        color="gray",
+        linestyle="--",
+        label="Out-of-sample start",
     )
     handles, labels = ax.get_legend_handles_labels()
     handles.append(
