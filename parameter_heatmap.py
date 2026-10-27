@@ -113,16 +113,15 @@ def score_grid(prices: pd.Series, window: slice) -> pd.DataFrame:
 
 
 def select_parameters(
-    prices: pd.Series,
+    results_df: pd.DataFrame,
     metric: str = "neighbourhood_sharpe",
 ) -> tuple[int, int]:
     """
-    Choose (fast_window, slow_window) using in-sample data only.
+    Choose (fast_window, slow_window) from the in-sample grid results.
 
     The default picks the centre of the strongest region rather than the
     single best cell, which is less likely to be a lucky outlier.
     """
-    results_df = score_grid(prices, evaluation_window(prices))
     best = results_df.loc[results_df[metric].idxmax()]
 
     return int(best["fast_window"]), int(best["slow_window"])
@@ -183,10 +182,13 @@ def plot_heatmap(ax, grid, benchmark_value, title, value_format):
 # Main
 # --------------------------------------------------
 
-def main():
-    print(f"Loading historical prices for {TICKER}...")
-    prices = load_prices(ticker=TICKER, period=PERIOD).dropna().sort_index()
+def build_heatmap(prices: pd.Series) -> pd.DataFrame:
+    """
+    Score the in-sample grid, save the CSV and heatmap, and print a summary.
 
+    Returns the grid results so callers can pick parameters from them
+    without re-running the grid. Call plt.show() afterward to display.
+    """
     window = evaluation_window(prices)
     start_date = prices.index[window.start].date()
     end_date = prices.index[window.stop - 1].date()
@@ -241,6 +243,15 @@ def main():
 
     print(f"\nResults saved to: {OUTPUT_CSV}")
     print(f"Heatmap saved to: {OUTPUT_PNG}")
+
+    return results_df
+
+
+def main():
+    print(f"Loading historical prices for {TICKER}...")
+    prices = load_prices(ticker=TICKER, period=PERIOD).dropna().sort_index()
+
+    build_heatmap(prices)
     plt.show()
 
 

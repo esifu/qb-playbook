@@ -11,6 +11,7 @@ from parameter_heatmap import (
     COST_BPS,
     PERIOD,
     TICKER,
+    build_heatmap,
     evaluation_window,
     select_parameters,
 )
@@ -29,8 +30,9 @@ def main():
 
     # The windows are chosen from the in-sample grid only, so the
     # out-of-sample period plays no part in picking them.
-    print("Selecting parameters from the in-sample period...")
-    fast_window, slow_window = select_parameters(prices)
+    print("Scoring the parameter grid on the in-sample period...")
+    grid_results = build_heatmap(prices)
+    fast_window, slow_window = select_parameters(grid_results)
     cost_bps = COST_BPS
     print(f"Selected fast={fast_window}, slow={slow_window}")
 
