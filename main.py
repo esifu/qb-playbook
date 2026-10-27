@@ -26,7 +26,7 @@ def print_metrics(name, returns):
 
 
 def main():
-    prices = load_prices(TICKER, PERIOD).dropna().sort_index()
+    prices = load_prices(TICKER, START_DATE, END_DATE).dropna().sort_index()
 
     # The windows are chosen from the in-sample grid only, so the
     # out-of-sample period plays no part in picking them.

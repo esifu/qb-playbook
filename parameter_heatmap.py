@@ -15,7 +15,9 @@ from metrics import calculate_metrics
 # --------------------------------------------------
 
 TICKER = "SPY"
-PERIOD = "10y"
+# Fixed dates keep every run on identical data (end is exclusive).
+START_DATE = "2000-01-01"
+END_DATE = "2026-10-27"
 COST_BPS = 5.0
 
 # Only the first 70% of the data is used, so the final 30% stays
@@ -249,7 +251,7 @@ def build_heatmap(prices: pd.Series) -> pd.DataFrame:
 
 def main():
     print(f"Loading historical prices for {TICKER}...")
-    prices = load_prices(ticker=TICKER, period=PERIOD).dropna().sort_index()
+    prices = load_prices(TICKER, START_DATE, END_DATE).dropna().sort_index()
 
     build_heatmap(prices)
     plt.show()

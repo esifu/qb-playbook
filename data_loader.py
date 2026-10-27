@@ -5,12 +5,19 @@ import pandas as pd
 
 def load_prices(
     ticker: str = "SPY",
-    period: str = "10y",
+    start: str = "2000-01-01",
+    end: str = "2026-10-27",
 ) -> pd.Series:
-    """Download daily prices for an ETF and return its adjusted close."""
+    """
+    Download daily prices for an ETF and return its adjusted close.
+
+    Fixed start and end dates keep runs on the same data range.
+    end is exclusive, matching yfinance.
+    """
     data = yf.download(
         ticker,
-        period=period,
+        start=start,
+        end=end,
         interval="1d",
         auto_adjust=True,
         progress=False,
