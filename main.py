@@ -9,7 +9,8 @@ from backtest import run_backtest
 from metrics import calculate_metrics
 from parameter_heatmap import (
     COST_BPS,
-    PERIOD,
+    END_DATE,
+    START_DATE,
     TICKER,
     build_heatmap,
     evaluation_window,
