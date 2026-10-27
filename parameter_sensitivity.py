@@ -15,7 +15,7 @@ TICKER = "SPY"
 PERIOD = "10y"
 COST_BPS = 5.0
 
-# Each tuple is (fast_window, slow_window).
+#(fast_window, slow_window).
 PARAMETER_COMBINATIONS = [
     (10, 50),
     (20, 100),
@@ -42,7 +42,7 @@ def main():
 
     results = []
 
-    # Calculate buy-and-hold metrics once as a benchmark.
+    # Calculate buy-and-hold benchmark metrics once.
     baseline = run_backtest(
         prices,
         fast_window=20,
@@ -54,8 +54,12 @@ def main():
         baseline["buy_hold_return"]
     )
 
-    print(f"\nTesting {len(PARAMETER_COMBINATIONS)} parameter combinations...\n")
+    print(
+        f"\nTesting {len(PARAMETER_COMBINATIONS)} "
+        "parameter combinations...\n"
+    )
 
+    # Run each moving-average combination.
     for fast_window, slow_window in PARAMETER_COMBINATIONS:
         print(
             f"Testing fast={fast_window}, "
@@ -80,40 +84,68 @@ def main():
             "cost_bps": COST_BPS,
         }
 
-        # Add strategy performance metrics.
+        # Store strategy metrics.
         for metric_name, value in strategy_metrics.items():
             row[f"strategy_{metric_name}"] = value
 
-        # Add buy-and-hold benchmark metrics.
+        # Store buy-and-hold benchmark metrics.
         for metric_name, value in benchmark_metrics.items():
             row[f"buy_hold_{metric_name}"] = value
 
         results.append(row)
 
-    # Build a table and rank by strategy Sharpe ratio.
+    # Convert results into a DataFrame.
     results_df = pd.DataFrame(results)
 
-    sharpe_column = "strategy_sharpe"
+    # Expected metric names from metrics.py.
+    cagr_column = "strategy_cagr"
+    sharpe_column = "strategy_sharpe_ratio"
+    volatility_column = "strategy_annualized_volatility"
+    drawdown_column = "strategy_max_drawdown"
 
-    if sharpe_column in results_df.columns:
-        results_df = results_df.sort_values(
-            by=sharpe_column,
-            ascending=False,
+    # Check that required columns exist.
+    print("\nAvailable columns:", results_df.columns.tolist())
+
+    required_columns = [
+        cagr_column,
+        sharpe_column,
+        volatility_column,
+        drawdown_column,
+    ]
+
+    missing_columns = [
+        column
+        for column in required_columns
+        if column not in results_df.columns
+    ]
+
+    if missing_columns:
+        raise ValueError(
+            "Expected metric columns were not found: "
+            f"{missing_columns}. "
+            "Check the keys returned by calculate_metrics() "
+            "in metrics.py and update the column names above."
         )
 
-    # Save results.
+    # Sort results by Sharpe ratio, highest first.
+    results_df = results_df.sort_values(
+        by=sharpe_column,
+        ascending=False,
+    )
+
+    # Save results to CSV.
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     results_df.to_csv(OUTPUT_FILE, index=False)
 
-    # Display the most useful columns.
+    # Display comparison table.
     display_columns = [
         "fast_window",
         "slow_window",
         "strategy_total_return",
-        "strategy_cagr",
-        "strategy_annualized_volatility",
-        "strategy_sharpe",
-        "strategy_max_drawdown",
+        cagr_column,
+        volatility_column,
+        sharpe_column,
+        drawdown_column,
     ]
 
     display_columns = [
@@ -124,6 +156,56 @@ def main():
 
     print("\nParameter sensitivity results:")
     print(results_df[display_columns].to_string(index=False))
+
+    # --------------------------------------------------
+    # Best risk-adjusted performance
+    # --------------------------------------------------
+
+    best_sharpe = results_df.loc[
+        results_df[sharpe_column].idxmax()
+    ]
+
+    print("\n" + "=" * 50)
+    print("BEST RISK-ADJUSTED PERFORMANCE")
+    print("=" * 50)
+    print("Ranking metric: Sharpe ratio")
+    print(f"Fast window: {int(best_sharpe['fast_window'])} days")
+    print(f"Slow window: {int(best_sharpe['slow_window'])} days")
+    print(f"CAGR: {best_sharpe[cagr_column]:.2%}")
+    print(f"Sharpe ratio: {best_sharpe[sharpe_column]:.3f}")
+    print(
+        f"Annualized volatility: "
+        f"{best_sharpe[volatility_column]:.2%}"
+    )
+    print(
+        f"Maximum drawdown: "
+        f"{best_sharpe[drawdown_column]:.2%}"
+    )
+
+    # --------------------------------------------------
+    # Best pure return
+    # --------------------------------------------------
+
+    best_return = results_df.loc[
+        results_df[cagr_column].idxmax()
+    ]
+
+    print("\n" + "=" * 50)
+    print("BEST PURE RETURN")
+    print("=" * 50)
+    print("Ranking metric: CAGR")
+    print(f"Fast window: {int(best_return['fast_window'])} days")
+    print(f"Slow window: {int(best_return['slow_window'])} days")
+    print(f"CAGR: {best_return[cagr_column]:.2%}")
+    print(f"Sharpe ratio: {best_return[sharpe_column]:.3f}")
+    print(
+        f"Annualized volatility: "
+        f"{best_return[volatility_column]:.2%}"
+    )
+    print(
+        f"Maximum drawdown: "
+        f"{best_return[drawdown_column]:.2%}"
+    )
 
     print(f"\nResults saved to: {OUTPUT_FILE}")
 
